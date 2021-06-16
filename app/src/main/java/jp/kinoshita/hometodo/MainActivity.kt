@@ -4,43 +4,45 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import androidx.databinding.DataBindingUtil
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.ktx.Firebase
 import jp.kinoshita.hometodo.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
-    lateinit var db: FirebaseFirestore
     private lateinit var binding: ActivityMainBinding
+    lateinit var auth: FirebaseAuth
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
-
-        db = FirebaseFirestore.getInstance()
-
-        val adapter = TaskListAdapter(this)
-        binding.tasksView.adapter = adapter
-        binding.tasksView.layoutManager = LinearLayoutManager(this)
+        auth = FirebaseAuth.getInstance()
 
 
-        db.collection("tasks").addSnapshotListener { snapshot , e ->
+        val mainViewModel = ViewModelProvider(this, MainViewModel.Factory(auth))[MainViewModel::class.java]
 
-
-            snapshot?.toObjects(Task::class.java)?.let { tasks ->
-                adapter.submitList(tasks)
+        mainViewModel.authState.observe(this) {
+            when(it) {
+                is AuthState.Loading -> Log.d("MainActivity", "認証状態読み込み中")
+                is AuthState.Authenticated -> {
+                    val ft = supportFragmentManager.beginTransaction()
+                    ft.replace(R.id.baseView, TasksFragment())
+                    ft.commit()
+                }
+                is AuthState.Unauthenticated -> {
+                    val ft = supportFragmentManager.beginTransaction()
+                    ft.replace(R.id.baseView, SignUpFragment())
+                    ft.commit()
+                }
             }
-
-            
         }
+
+
+
     }
 
-    private fun createTask(task: Task) {
-        db.collection("tasks")
-            .add(task).addOnSuccessListener {
-                Log.d("Firestore", "createTask success")
-            }.addOnFailureListener {
-                Log.w("Firestore", "createTask failure", it)
-            }
-    }
+
 }
