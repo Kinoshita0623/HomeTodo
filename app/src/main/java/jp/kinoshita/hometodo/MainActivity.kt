@@ -22,7 +22,7 @@ class MainActivity : AppCompatActivity() {
         auth = FirebaseAuth.getInstance()
 
 
-        val mainViewModel = ViewModelProvider(this, MainViewModel.Factory(auth))[MainViewModel::class.java]
+        val mainViewModel = ViewModelProvider(this, MainViewModel.Factory(auth, FirebaseFirestore.getInstance()))[MainViewModel::class.java]
 
         mainViewModel.authState.observe(this) {
             when(it) {
